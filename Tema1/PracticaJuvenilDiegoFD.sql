@@ -83,6 +83,79 @@ END
 use PJ1DiegoFD
 EXEC listadocuatromasprestados
 
+-----------------------------------
+---------VUELTO A HACER------------
+-----------------------------------
+
+create or alter procedure listadocuatromasprestados2
+as
+begin
+
+declare @codLibro varchar(10),
+@NumLibros int,
+@nombreLibro varchar(30),
+@numPrestamo int,
+@generoLibro varchar(10),
+@dniSocio varchar(10),
+@fechaPrestamo date
+
+if not exists (select 1 from LIBROS) OR NOT EXISTS 
+				(SELECT 1 FROM SOCIOS) 
+    BEGIN
+        PRINT 'No hay datos en las tablas.';
+    END
+
+SET @NumLibros = (SELECT COUNT(p.RefLibro) FROM prestamos AS p
+INNER JOIN libros AS l ON p.RefLibro=l.RefLibro)
+
+PRINT @NumLibros
+
+if @NumLibros<4
+begin
+Print 'Hay menos de 4 libros prestados'
+end
+
+
+	declare curLibro cursor for
+	select top 4 l.reflibro, nombre, COUNT(p.reflibro), Genero
+	from LIBROS as l inner join PRESTAMOs as p
+	on l.RefLibro=p.RefLibro
+	group by Nombre, Genero, l.RefLibro
+
+	open curLibro
+	fetch curLibro into @codlibro, @nombrelibro, @numPrestamo, @generoLibro
+	while (@@FETCH_STATUS=0)
+	begin
+	print(concat(@nombrelibro, ' ', @numPrestamo, ' ' , @generoLibro))
+
+	declare curSocio cursor for
+	select s.DNI, pr.FechaPrestamo
+	from socios as s inner join Prestamos as pr
+	on s.DNI=pr.DNI
+	where pr.RefLibro=@codLibro
+
+	open curSOcio
+	fetch curSocio into @dniSocio, @fechaPrestamo
+	while (@@FETCH_STATUS=0)
+	begin
+
+	print(concat('	', @dniSocio, ' ', @fechaPrestamo ))
+
+	fetch curSocio into @dniSocio, @fechaPrestamo
+	end
+
+	close curSocio
+	deallocate curSOcio
+
+	fetch curLibro into @codlibro, @nombrelibro, @numPrestamo, @generoLibro
+	end
+
+	close curLibro
+	deallocate curLibro
+
+end
+
+exec listadocuatromasprestados2
 
 --EJERCICIO 2
 
