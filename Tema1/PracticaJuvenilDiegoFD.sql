@@ -260,7 +260,6 @@ EXEC MostrarNotasModulo 'RET';
 
 DROP DATABASE PJ3;
 
-CREATE DATABASE PJ3
 USE PJ3
 
 CREATE TABLE Productos
@@ -361,28 +360,78 @@ IF NOT EXISTS (SELECT 1 FROM VENTAS) OR NOT EXISTS (SELECT 1 FROM PRODUCTOS)
 
 exec ActualizarStock1a
 
-------Procedure 1b
+------Procedure 2a
 
-CREATE OR ALTER PROCEDURE ActualizarStock1b
-AS
-BEGIN
 
-IF NOT EXISTS (SELECT 1 FROM VENTAS) OR NOT EXISTS (SELECT 1 FROM PRODUCTOS)
+CREATE or alter TRIGGER ActualizarStock2a
+    ON ventas
+    FOR UPDATE
+    AS
     BEGIN
-        PRINT 'Error: No hay datos en las tablas.';
-        RETURN;
-    END
-
-	declare @numVentas int,
+    declare @idVenta varchar(10),
 	@idProducto varchar(10),
-	@cantidadProd int,
-	@uVentas int,
-	@idVenta varchar(10)
+	@unidadesVendidas int,
+	@stock int
 
-exec ActualizarStock1b
+	set @idVenta = (select codVenta from inserted)
+	set @idProducto = (select codProducto from inserted)
+	set @unidadesVendidas = (select unidadesVendidas from inserted)
+
+	set @stock=(select stock from Productos where CodProducto=@idProducto)
+
+	if(@unidadesVendidas>@stock)
+	begin
+
+	print('Casi mi compa')
+	rollback
+	end
+
+	else
+	begin
+
+	update Productos set Stock = Stock-@unidadesVendidas
+	where CodProducto=@idProducto
+	end
+
+	END 
+
+---------La otra parte---------------
+
+	CREATE or alter TRIGGER ActualizarStock2a2
+    ON ventas
+    FOR update
+    AS
+    BEGIN
+    declare @idVenta varchar(10),
+	@idProducto varchar(10),
+	@unidadesDevueltas int,
+	@unidadesVendidas int,
+	@loQueQueda int
+
+	set @idVenta = (select codVenta from inserted)
+	set @idProducto = (select codProducto from inserted)
+	set @unidadesDevueltas = (select unidadesVendidas from deleted)
+
+	set @unidadesVendidas=(select unidadesVendidas from ventas where CodProducto=@idProducto)
+
+	set @loQueQueda=@unidadesVendidas-@unidadesDevueltas
+
+	if(@loQueQueda=0)
+	begin
+
+	delete from Ventas
+	where CodVenta=@idVenta
+	
+	end
+
+	update Productos set Stock = Stock+@unidadesDevueltas
+	where CodProducto=@idProducto
+	end
+
+	END 
 
 
-
+------------PARTE B-----------------------
 
 create or alter procedure listadoVentasb
 as
